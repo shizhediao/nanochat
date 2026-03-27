@@ -13,6 +13,8 @@ Usage (drop-in replacement for FA3):
     # Inference (with KV cache)
     y = flash_attn.flash_attn_with_kvcache(q, k_cache, v_cache, k=k, v=v, ...)
 """
+import os
+import sys
 import torch
 import torch.nn.functional as F
 
@@ -30,10 +32,15 @@ def _load_flash_attention_3():
         # Ada (sm89), Blackwell (sm100) need SDPA fallback until FA3 is recompiled
         if major != 9:
             return None
-        import os
         os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
         from kernels import get_kernel
-        return get_kernel('varunneal/flash-attention-3').flash_attn_interface
+        fa3_mod = get_kernel('varunneal/flash-attention-3').flash_attn_interface
+        # Ensure FA3's directory is in sys.path so torch.compile's dynamo can
+        # import flash_attn_config during fake-tensor tracing of the backward pass
+        fa3_dir = os.path.dirname(fa3_mod.__file__)
+        if fa3_dir not in sys.path:
+            sys.path.insert(0, fa3_dir)
+        return fa3_mod
     except Exception:
         return None
 
@@ -41,8 +48,8 @@ def _load_flash_attention_3():
 _fa3 = _load_flash_attention_3()
 HAS_FA3 = _fa3 is not None
 
-# Override for testing: set to 'fa3', 'sdpa', or None (auto)
-_override_impl = None
+# Override: set to 'fa3', 'sdpa', or None (auto). Can also be set via NANOCHAT_ATTN env var.
+_override_impl = os.environ.get("NANOCHAT_ATTN", None)
 
 
 def _resolve_use_fa3():

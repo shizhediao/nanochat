@@ -10,15 +10,22 @@
 # 3) Example launch with wandb logging, but see below for setting up wandb first:
 # WANDB_RUN=speedrun screen -L -Logfile runs/speedrun.log -S speedrun bash runs/speedrun.sh
 
-# Default intermediate artifacts directory is in ~/.cache/nanochat
+# Lustre base for all caches and artifacts ($HOME is only 10GB)
+LUSTRE_HOME="/lustre/fsw/portfolios/llmservice/users/sdiao"
+
 export OMP_NUM_THREADS=1
-export NANOCHAT_BASE_DIR="$HOME/.cache/nanochat"
+export NANOCHAT_BASE_DIR="$LUSTRE_HOME/.cache/nanochat"
+export HF_HOME="$LUSTRE_HOME/.cache/huggingface"
+export UV_CACHE_DIR="$LUSTRE_HOME/.cache/uv"
+export TRITON_CACHE_DIR="$LUSTRE_HOME/.cache/triton"
+export XDG_CACHE_HOME="$LUSTRE_HOME/.cache"
 mkdir -p $NANOCHAT_BASE_DIR
 
 # -----------------------------------------------------------------------------
 # Python venv setup with uv
 
 # install uv (if not already installed)
+export PATH="$HOME/.local/bin:$PATH"
 command -v uv &> /dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 # create a .venv local virtual environment (if it doesn't exist)
 [ -d ".venv" ] || uv venv
